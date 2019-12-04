@@ -1,18 +1,17 @@
-import Vue from 'vue'
-import Router from 'vue-router'
-import Home from '@/views/Home'
+import HelloWorld from '@/components/HelloWorld.vue'
+import Home from '@/views/Home.vue'
 
 
-Vue.use(Router)
-
-
-  const routes = [
+export default [
     {
-      name:'home',
-      path: '/',
-      components: Home
+      name:'hello',
+      path: '',
+      component: HelloWorld
+    },
+    {
+        name:'register',
+        path:'/register',
+        component: Home
     }
   ]
-  const router = new Router({routes})
 
-  export default router
