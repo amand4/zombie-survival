@@ -1,90 +1,113 @@
 <template>
-  <div class="pg-register">
-
+  <div class="pg-register custom-background">
     <div class="container">
-      <div class="element-content">
-        <parallax>
-          <img src="@/assets/img/twd-background-register.jpg" alt="background twd">
-        </parallax>
+      <div class="element-content">     
         <div> 
           <h1> Register </h1>
         </div>
         <b-form @submit.prevent="save" class="form-register">
-            <label>Name</label>
             <b-form-input class="input" type="text" placeholder="name" v-model="person.name"></b-form-input>
-            <label>Age</label>
             <b-form-input class="input" type="number" placeholder="age" v-model="person.age"></b-form-input>
-            <label>Gender</label>
-            <b-form-input class="input" type="text" placeholder="gender" v-model="person.gender"></b-form-input>
-            <label>Last location</label>
-            <b-form-input class="input"  type="text" placeholder="LonLat"> </b-form-input>
-            <!-- <GmapMap
-            v-bind:center="{lat:10, lng:10}"
-            v-bind::zoom="7"
-            map-type-id="terrain"
-            style="width: 500px; height: 225px"
-          >
-            <GmapMarker
-              v-bind:key="index"
-              v-for="(m, index) in markers"
-              v-bind:position="m.position"
-              v-bind:clickable="true"
-            />
-          </GmapMap> -->
-            <label>Inventory</label>
-            <b-form-group id="input-group-4">
-              <b-form-checkbox-group v-model="person.items" id="checkboxes-4">
-                <b-form-checkbox value="food:5">Food</b-form-checkbox>
-                <b-form-checkbox value="water:2">Water</b-form-checkbox>
-              </b-form-checkbox-group>
-            </b-form-group>   
-            <!-- <div> -->
-            <!-- <div v-for="(item) in person.items"  v-bind:key="item">
-                <input type="text" v-model="item.name"> 
-                <input type="text" v-model="item.quantity">
+            <b-form-radio  type="radio" value="F" v-model="person.gender"> Female </b-form-radio>
+            <b-form-radio  type="radio" value="M" v-model="person.gender"> Male </b-form-radio>
+            <div>
+              <h2>Search and add a pin</h2>
+              <label>
+                <gmap-autocomplete
+                  @place_changed="setPlace">
+                </gmap-autocomplete>
+                <button type="button" @click="addMarker">Add</button>
+              </label>
+              <br/>
+
             </div>
-            <button @click="addNewItem()"></button>
-            {{ prepareData }}
-
-            {{ preparedData.join(';') }}
-            </div> -->
+            <br>
+            <gmap-map
+              :center="center"
+              :zoom="12"
+              style="width:100%;  height: 400px;"
+            >
+              <gmap-marker
+                :key="index"
+                v-for="(m, index) in markers"
+                :position="m.position"
+                @click="center=m.position"
+              ></gmap-marker>
+            </gmap-map>
+            <div>
+              <div v-for="(item, index) in person.items"  v-bind:key="`item-${index}`">
+                <b-form-select v-model="item.name" :options="options"></b-form-select>
+                  <input type="number" v-model="item.quantity">
+              </div>
+            <b-button variant="secondary" class="addItem" type="button" @click="addNewItem()"> Add Item</b-button>         
+            </div>
             <b-button type="submit" class="btn-submit" variant="primary">Register</b-button>
-
         </b-form>
       </div>
-
     </div>
-
-  </div>
+   </div>
 </template>
 
 <script>
 import People from '@/services/people'
-import Parallax from 'vue-parallaxy'
 
 export default {
   name: 'Register',
-  computed: {
-    preparedData() {
-      return this.prepareData()
-    }
-  },
+  
   data(){
     return {
+      center: { lat: 45.508, lng: -73.587 },
+      markers: [],
+      places: [],
+      currentPlace: null,
+      selected:'',
       people:[],
       person:{
         id:'',
         name:'',
         age:'',
         gender:'',
-        location:null,
+        lonlat:'',
         items: []
-        
-      }
+      },
+      options: [
+        { value: 'Water', text: 'Water' },
+        { value: 'Food', text: 'Food' },
+        { value: 'Medication', text: 'Medication' },
+        { value: 'Ammunition', text: 'Ammunition'}
+      ],             
       
     }
   },
+  mounted() {
+    this.geolocate();
+  },
+
   methods:{
+    setPlace(place) {
+      this.currentPlace = place;
+    },
+    addMarker() {
+      if (this.currentPlace) {
+        const marker = {
+          lat: this.currentPlace.geometry.location.lat(),
+          lng: this.currentPlace.geometry.location.lng()
+        };
+        this.person.lonlat = `Point(${marker.lat} ${marker.lng})`
+        this.markers=[{ position: marker }];
+        this.places.push(this.currentPlace);
+        this.center = marker;
+        this.currentPlace = null;
+      }
+    },
+    geolocate: function() {
+      navigator.geolocation.getCurrentPosition(position => {
+        this.center = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        };
+      });
+    },
     
     addNewItem() {
       this.person.items.push({
@@ -92,18 +115,21 @@ export default {
       quantity: 0
       })
     },
+ 
     prepareData() {
-      return this.person.items.map(item => `${item.name}:${item.quantity}`)
+      const items = this.person.items.map(item => `${item.name}:${item.quantity}`)
+      return items.join(';')
     },
 
     save(){
       
       if(!this.person.location){
         const person = Object.assign({}, this.person)
-        // person.items = person.items.join(';')
+        person.items = this.prepareData()       
         People.save(person).then(response => {
         alert('Criado com sucesso!')
-        console.log(response);
+        console.log(response)
+        window.location = 'http://localhost:8080/'
         })
       
       }else{ 
@@ -118,10 +144,8 @@ export default {
     edit(person){
       this.person = person
     }
-  },
-  components: {
-      Parallax
-    }
+  }
+
 }
 
 </script>
@@ -132,11 +156,20 @@ export default {
 .pg-register{
  background-color: black;
 }
+  .pg-register.custom-background{
+    background-color: #2d2c2a;
+    background-image: url(../assets/img/fullbg.png);
+    background-position: left top;
+    background-size: auto;
+    background-repeat: repeat;
+    background-attachment: fixed;
+  }
   .pg-register .element-content{
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    font-size: 13px;
 
   }
     .pg-register .element-content h1{
@@ -167,8 +200,15 @@ export default {
         transition: border-color .2s ease-out;
       }
       .pg-register .element-content .form-register label{
-        display:none;
       }
+      .pg-register .element-content .form-register .custom-radio {
+        display: inline-block;
+        margin-right: 28px;
+      }
+        .pg-register .element-content .form-register .custom-radio label{
+          display: inline;
+          color: #fff;
+        }
   .pg-register .element-content .form-register .btn-submit{ 
     font-family: Marcellus,sans-serif;
     font-size: 15px;
@@ -192,4 +232,13 @@ export default {
     border-color: rgba(255, 255, 255, 1);
     box-shadow: 0 0 2px rgba(255,255,255,.75), 0 0 14px rgba(255,255,255,.5), 0 0 33px rgba(255,255,255,.25), 0 0 55px rgba(255,255,255,.25);
   }
+  .pg-register .element-content .form-register .vue-map-container {
+    height: 180px;
+    max-width: 992px;
+    width: 100%;
+  }
+  .pg-register .element-content .form-register label{
+
+  }
+  
 </style>
