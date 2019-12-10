@@ -1,17 +1,17 @@
 <template>
 <b-row> 
-    <b-col> <register> </register> </b-col>
+    <b-col> <home> </home> </b-col>
 </b-row>
     
 </template>
 
 <script>
-import Register from '@/components/Register.vue'
+import Home from '@/components/Home.vue'
 
 export default {
   name: 'Home',
   components: {
-    Register
+    Home
   }
 }
 </script>
